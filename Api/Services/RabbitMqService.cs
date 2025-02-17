@@ -15,7 +15,7 @@ namespace RabbitMqMessagingAPI.Services
             {
                 HostName = "localhost", // یا آدرس سرور RabbitMQ شما
                 UserName = "mopix",
-                Password = "72M991gh."
+                Password = "xxxxxx."
             };
 
             _connection = factory.CreateConnection();
