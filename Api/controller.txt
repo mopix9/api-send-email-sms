@@ -1,0 +1,87 @@
+using Api.Models;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using NotificationService.Services;
+
+[ApiController]
+[Route("api/[controller]")]
+public class NotificationController : ControllerBase
+{
+    private readonly RabbitMqService _rabbitMqService;
+    private readonly EmailService _emailService;
+    private readonly SmsService _smsService;
+
+    public NotificationController(RabbitMqService rabbitMqService, EmailService emailService, SmsService smsService)
+    {
+        _rabbitMqService = rabbitMqService;
+        _emailService = emailService;
+        _smsService = smsService;
+
+        // Declare Exchanges and Queues
+        _rabbitMqService.DeclareExchange("crm-exchange");
+        _rabbitMqService.DeclareExchange("afkar-exchange");
+
+        _rabbitMqService.DeclareQueue("sms_crm_queue");
+        _rabbitMqService.DeclareQueue("email_crm_queue");
+        _rabbitMqService.DeclareQueue("sms_afkar_queue");
+        _rabbitMqService.DeclareQueue("email_afkar_queue");
+
+        _rabbitMqService.BindQueue("sms_crm_queue", "crm-exchange", "sms_crm");
+        _rabbitMqService.BindQueue("email_crm_queue", "crm-exchange", "email_crm");
+        _rabbitMqService.BindQueue("sms_afkar_queue", "afkar-exchange", "sms_afkar");
+        _rabbitMqService.BindQueue("email_afkar_queue", "afkar-exchange", "email_afkar");
+    }
+
+    [HttpPost("send-email")]
+    public IActionResult SendEmail([FromBody] EmailMessage email)
+    {
+        if (string.IsNullOrEmpty(email.SystemName))
+            return BadRequest("SystemName is required.");
+
+        string routingKey = email.SystemName.ToLower() switch
+        {
+            "afkar" => "email_afkar",
+            "crm" => "email_crm",
+            _ => throw new ArgumentException("Invalid SystemName")
+        };
+
+        var message = JsonConvert.SerializeObject(email);
+        string exchange = email.SystemName.ToLower() == "afkar" ? "afkar-exchange" : "crm-exchange";
+        _rabbitMqService.Publish(exchange, routingKey, message);
+
+        // Optionally, send the email immediately
+        _emailService.SendEmail(email);
+
+        return Ok($"Email sent to {email.SystemName} queue and optionally delivered.");
+    }
+
+    [HttpPost("send-sms")]
+    public IActionResult SendSms([FromBody] SmsMessage sms)
+    {
+        if (string.IsNullOrEmpty(sms.SystemName))
+            return BadRequest("SystemName is required.");
+
+        string routingKey = sms.SystemName.ToLower() switch
+        {
+            "afkar" => "sms_afkar",
+            "crm" => "sms_crm",
+            _ => throw new ArgumentException("Invalid SystemName")
+        };
+
+        var message = JsonConvert.SerializeObject(sms);
+        string exchange = sms.SystemName.ToLower() == "afkar" ? "afkar-exchange" : "crm-exchange";
+        _rabbitMqService.Publish(exchange, routingKey, message);
+
+        // Optionally, send the SMS immediately
+        try
+        {
+            _smsService.SendSms(sms.PhoneNumber, sms.Message);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest($"Error while sending SMS: {ex.Message}");
+        }
+
+        return Ok($"SMS sent to {sms.SystemName} queue and optionally delivered.");
+    }
+}

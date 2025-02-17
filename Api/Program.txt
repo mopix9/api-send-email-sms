@@ -1,0 +1,58 @@
+
+
+using NotificationService.Services;
+using Serilog;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+
+var builder = WebApplication.CreateBuilder(args);
+
+
+/*// اضافه کردن تنظیمات Kestrel
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(7159); // گوش دادن به تمامی IP‌ها روی پورت 7159
+});*/
+// تنظیمات Serilog برای لاگینگ
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+// تنظیمات سرویس‌ها
+builder.Services.AddSingleton<RabbitMqService>(sp =>
+{
+    var configuration = builder.Configuration;
+    string hostName = configuration["RabbitMQ:HostName"];
+    string userName = configuration["RabbitMQ:UserName"];
+    string password = configuration["RabbitMQ:Password"];
+    return new RabbitMqService(hostName, userName, password);
+});
+
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<SmsService>();
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// اصلاح: اضافه کردن RabbitMqConsumer به عنوان scoped یا transient
+builder.Services.AddScoped<RabbitMqConsumer>();  // تغییر به scoped
+
+// تنظیمات Serilog برای لاگینگ
+builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog());
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
