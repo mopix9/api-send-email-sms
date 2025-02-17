@@ -29,10 +29,10 @@ namespace NotificationService.Services
                 switch (email.SystemName.ToLower())
                 {
                     case "afkar":
-                        fromAddress = "afkar@kpec-co.com";
+                        fromAddress = "afkar@xxxxx.com";
                         break;
                     case "crm":
-                        fromAddress = "crm@kpec-co.com";
+                        fromAddress = "crm@xxxx.com";
                         break;
                     default:
                         fromAddress = "no-reply@example.com"; // آدرس پیش‌فرض
@@ -49,7 +49,7 @@ namespace NotificationService.Services
                     // برای ایمیل HTML
                     mimeMessage.Body = new TextPart("html")
                     {
-                        Text = email.Body + "<hr/><b>واحد توسعه نرم افزار شرکت تجارت الکترونیک پارسیان کیش</b>"
+                        Text = email.Body + "<hr/><b>واحد توسعه نرم افزار شرکت تجارت الکترونیک  کیش</b>"
                     };
                 }
                 else
@@ -57,7 +57,7 @@ namespace NotificationService.Services
                     // برای ایمیل ساده
                     mimeMessage.Body = new TextPart("plain")
                     {
-                        Text = email.Body + "\n________________________________________\n*واحد توسعه نرم افزار شرکت تجارت الکترونیک پارسیان کیش*"
+                        Text = email.Body + "\n________________________________________\n*واحد توسعه نرم افزار شرکت تجارت الکترونیک  کیش*"
                     };
                 }
 
@@ -70,7 +70,7 @@ namespace NotificationService.Services
                     client.Connect("linux20.sgnetway.net", 587, SecureSocketOptions.StartTls);
 
                     // احراز هویت با اطلاعات صحیح
-                    client.Authenticate("afkar@kpec-co.com", "kpec@123456");
+                    client.Authenticate("user-name", "your-pass");
 
                     // ارسال ایمیل
                     client.Send(mimeMessage);
